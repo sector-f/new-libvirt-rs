@@ -5,4 +5,4 @@ authors = ["Adam <sector-f@users.noreply.github.com>"]
 
 [dependencies]
 libc = "0.2.0"
-libvirt-sys = { path = "../libvirt-sys/" }
+libvirt-sys = { git = "https://github.com/sector-f/new-libvirt-sys.git", rev = "856ad6e66b2b241919132edf311bac096cbe7295" }
