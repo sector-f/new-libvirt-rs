@@ -162,7 +162,7 @@ impl Domain {
 
     pub fn get_info(&self) -> Result<DomainInfo, Error> {
         unsafe {
-            let pinfo: libvirt_sys::virDomainInfoPtr = ptr::null_mut();
+            let pinfo = &mut libvirt_sys::virDomainInfo::default();
             let res = libvirt_sys::virDomainGetInfo(self.as_ptr(), pinfo);
             if res == -1 {
                 return Err(Error::new());
@@ -185,9 +185,7 @@ impl Domain {
 
     pub fn interface_stats(&self, path: &str) -> Result<InterfaceStats, Error> {
         unsafe {
-            // let pinfo = &mut sys::virDomainInterfaceStats::default();
-
-            let pinfo: libvirt_sys::virDomainInterfaceStatsPtr = ptr::null_mut();
+            let pinfo = &mut libvirt_sys::_virDomainInterfaceStats::default();
             let ret = libvirt_sys::virDomainInterfaceStats(self.as_ptr(),
                                               string_to_c_chars!(path),
                                               pinfo,
