@@ -3,7 +3,7 @@ extern crate libvirt_sys;
 use error::Error;
 
 use std::ffi::CStr;
-use std::{ptr, slice};
+use std::{ptr, slice, mem};
 
 #[derive(Copy, Clone)]
 pub enum ListAllDomainsFlags {
@@ -67,6 +67,35 @@ pub enum IpAddrType {
     Last = 2,
 }
 
+#[derive(Clone, Debug)]
+pub struct DomainInfo {
+    /// The running state, one of virDomainState.
+    pub state: DomainState,
+    /// The maximum memory in KBytes allowed.
+    pub max_mem: u64,
+    /// The memory in KBytes used by the domain.
+    pub memory: u64,
+    /// The number of virtual CPUs for the domain.
+    pub nr_virt_cpu: u32,
+    /// The CPU time used in nanoseconds.
+    pub cpu_time: u64,
+}
+
+impl DomainInfo {
+    pub fn from_ptr(ptr: libvirt_sys::virDomainInfoPtr) -> DomainInfo {
+        unsafe {
+            DomainInfo {
+                state: DomainState::new((*ptr).state).unwrap(),
+                max_mem: (*ptr).maxMem as u64,
+                memory: (*ptr).memory as u64,
+                nr_virt_cpu: (*ptr).nrVirtCpu as u32,
+                cpu_time: (*ptr).cpuTime as u64,
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum DomainState {
     NoState = 0,
     Running = 1,
@@ -121,6 +150,27 @@ impl Domain {
         self.ptr.unwrap()
     }
 
+    pub fn get_name(&self) -> Result<String, Error> {
+        unsafe {
+            let n = libvirt_sys::virDomainGetName(self.as_ptr());
+            if n.is_null() {
+                return Err(Error::new());
+            }
+            return Ok(c_chars_to_string!(n, nofree));
+        }
+    }
+
+    pub fn get_info(&self) -> Result<DomainInfo, Error> {
+        unsafe {
+            let pinfo: libvirt_sys::virDomainInfoPtr = ptr::null_mut();
+            let res = libvirt_sys::virDomainGetInfo(self.as_ptr(), pinfo);
+            if res == -1 {
+                return Err(Error::new());
+            }
+            return Ok(DomainInfo::from_ptr(pinfo));
+        }
+    }
+
     pub fn get_state(&self) -> Result<(DomainState, i32), Error> {
         unsafe {
             let mut state: libc::c_int = -1;
@@ -130,6 +180,22 @@ impl Domain {
                 return Err(Error::new());
             }
             return Ok((DomainState::new(state as u8).unwrap(), reason as i32));
+        }
+    }
+
+    pub fn interface_stats(&self, path: &str) -> Result<InterfaceStats, Error> {
+        unsafe {
+            // let pinfo = &mut sys::virDomainInterfaceStats::default();
+
+            let pinfo: libvirt_sys::virDomainInterfaceStatsPtr = ptr::null_mut();
+            let ret = libvirt_sys::virDomainInterfaceStats(self.as_ptr(),
+                                              string_to_c_chars!(path),
+                                              pinfo,
+                                              mem::size_of::<libvirt_sys::_virDomainInterfaceStats>());
+            if ret == -1 {
+                return Err(Error::new());
+            }
+            return Ok(InterfaceStats::from_ptr(pinfo));
         }
     }
 
