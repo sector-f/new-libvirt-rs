@@ -1,3 +1,4 @@
+extern crate libc;
 extern crate libvirt_sys;
 use error::Error;
 
@@ -66,6 +67,33 @@ pub enum IpAddrType {
     Last = 2,
 }
 
+pub enum DomainState {
+    NoState = 0,
+    Running = 1,
+    Blocked = 2,
+    Paused = 3,
+    Shutdown = 4,
+    Shutoff = 5,
+    Crashed = 6,
+    PmSuspended = 7,
+}
+
+impl DomainState {
+    pub fn new(n: u8) -> Option<Self> {
+        match n {
+            0 => Some(DomainState::NoState),
+            1 => Some(DomainState::Running),
+            2 => Some(DomainState::Blocked),
+            3 => Some(DomainState::Paused),
+            4 => Some(DomainState::Shutdown),
+            5 => Some(DomainState::Shutoff),
+            6 => Some(DomainState::Crashed),
+            7 => Some(DomainState::PmSuspended),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct DomainIpAddress {
     // pub type_: IpAddrType,
@@ -91,6 +119,18 @@ impl Domain {
 
     pub fn as_ptr(&self) -> libvirt_sys::virDomainPtr {
         self.ptr.unwrap()
+    }
+
+    pub fn get_state(&self) -> Result<(DomainState, i32), Error> {
+        unsafe {
+            let mut state: libc::c_int = -1;
+            let mut reason: libc::c_int = -1;
+            let ret = libvirt_sys::virDomainGetState(self.as_ptr(), &mut state, &mut reason, 0);
+            if ret == -1 {
+                return Err(Error::new());
+            }
+            return Ok((DomainState::new(state as u8).unwrap(), reason as i32));
+        }
     }
 
     pub fn interface_addresses(&self, source: InterfaceAddressSource) -> Result<Vec<DomainInterface>, Error> {
