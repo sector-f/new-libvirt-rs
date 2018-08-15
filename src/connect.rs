@@ -60,4 +60,36 @@ impl Connect {
             return Ok(array);
         }
     }
+
+    pub fn list_active_domains(&self) -> Result<Vec<u32>, Error> {
+        unsafe {
+            let mut ids: [libc::c_int; 512] = [0; 512];
+            let size = libvirt_sys::virConnectListDomains(self.as_ptr(), ids.as_mut_ptr(), 512);
+            if size == -1 {
+                return Err(Error::new());
+            }
+
+            let mut array: Vec<u32> = Vec::new();
+            for x in 0..size as usize {
+                array.push(ids[x] as u32);
+            }
+            return Ok(array);
+        }
+    }
+
+    pub fn list_defined_domains(&self) -> Result<Vec<String>, Error> {
+        unsafe {
+            let mut names: [*mut libc::c_char; 1024] = [ptr::null_mut(); 1024];
+            let size = libvirt_sys::virConnectListDefinedDomains(self.as_ptr(), names.as_mut_ptr(), 1024);
+            if size == -1 {
+                return Err(Error::new());
+            }
+
+            let mut array: Vec<String> = Vec::new();
+            for x in 0..size as usize {
+                array.push(c_chars_to_string!(names[x]));
+            }
+            return Ok(array);
+        }
+    }
 }

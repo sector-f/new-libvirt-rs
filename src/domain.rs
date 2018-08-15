@@ -2,6 +2,7 @@ extern crate libc;
 extern crate libvirt_sys;
 use error::Error;
 
+use connect::Connect;
 use std::ffi::CStr;
 use std::{ptr, slice, mem};
 
@@ -148,6 +149,26 @@ impl Domain {
 
     pub fn as_ptr(&self) -> libvirt_sys::virDomainPtr {
         self.ptr.unwrap()
+    }
+
+    pub fn lookup_by_id(conn: &Connect, id: u32) -> Result<Domain, Error> {
+        unsafe {
+            let ptr = libvirt_sys::virDomainLookupByID(conn.as_ptr(), id as libc::c_int);
+            if ptr.is_null() {
+                return Err(Error::new());
+            }
+            return Ok(Domain::new(ptr));
+        }
+    }
+
+    pub fn lookup_by_name(conn: &Connect, id: &str) -> Result<Domain, Error> {
+        unsafe {
+            let ptr = libvirt_sys::virDomainLookupByName(conn.as_ptr(), string_to_c_chars!(id));
+            if ptr.is_null() {
+                return Err(Error::new());
+            }
+            return Ok(Domain::new(ptr));
+        }
     }
 
     pub fn get_name(&self) -> Result<String, Error> {
