@@ -15,10 +15,12 @@ macro_rules! string_to_c_chars {
     ($x:expr) => (::std::ffi::CString::new($x).unwrap().as_ptr())
 }
 
+#[allow(unused_macros)]
 macro_rules! string_to_mut_c_chars {
     ($x:expr) => (::std::ffi::CString::new($x).unwrap().into_raw())
 }
 
+#[allow(unused_macros)]
 macro_rules! string_to_mut_c_chars {
     ($x:expr) => (::std::ffi::CString::new($x).unwrap().into_raw())
 }
