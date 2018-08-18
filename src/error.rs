@@ -3,6 +3,8 @@ extern crate libvirt_sys as sys;
 
 use std::error::Error as StdError;
 use std::fmt::{Display, Result as FmtResult, Formatter};
+use std::os::raw::c_void;
+use std::ptr::NonNull;
 
 #[derive(Debug, PartialEq)]
 #[repr(C)]
@@ -30,6 +32,12 @@ impl Error {
     pub fn new() -> Error {
         unsafe {
             let ptr: sys::virErrorPtr = sys::virGetLastError();
+            Error::from_ptr(ptr)
+        }
+    }
+
+    pub fn from_ptr(ptr: sys::virErrorPtr) -> Error {
+        unsafe {
             Error {
                 code: (*ptr).code,
                 domain: (*ptr).domain,
@@ -54,5 +62,21 @@ impl Display for Error {
                self.code,
                self.domain,
                self.message)
+    }
+}
+
+static mut HANDLER: Option<NonNull<Fn(Error)>> = None;
+
+pub fn set_error_func<F: Fn(Error) + 'static>(f: F) {
+    unsafe extern "C" fn callback<F: Fn(Error)>(user_data: *mut c_void, error: sys::virErrorPtr) {
+        let f = user_data as *const F;
+        let wrapped_error = Error::from_ptr(error);
+        (*f)(wrapped_error)
+    }
+    let data = Box::into_raw(Box::new(f));
+    unsafe {
+        HANDLER.take().map(|p| Box::from_raw(p.as_ptr())); //drop the old one
+        HANDLER = Some(NonNull::new_unchecked(data));
+        sys::virSetErrorFunc(data as _, Some(callback::<F>))
     }
 }
