@@ -39,8 +39,8 @@ impl Connect {
         }
     }
 
-    pub fn list_all_domains(&self, flags: &[ListAllDomainsFlags])-> Result<Vec<Domain>, Error> {
-        let flags_value = flags.iter().fold(0, |acc, flag| acc + *flag as u32);
+    pub fn list_all_domains(&self, flags: Option<ListAllDomainsFlags>)-> Result<Vec<Domain>, Error> {
+        let flags_value = flags.and_then(|f| Some(f.bits())).unwrap_or(0);
 
         unsafe {
             let mut domains: *mut sys::virDomainPtr = ptr::null_mut();

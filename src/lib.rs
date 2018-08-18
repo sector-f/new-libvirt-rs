@@ -1,3 +1,5 @@
+#[macro_use] extern crate bitflags;
+
 macro_rules! c_chars_to_string {
     ($x:expr) => {{
         let ret = ::std::ffi::CStr::from_ptr($x).to_string_lossy().into_owned();

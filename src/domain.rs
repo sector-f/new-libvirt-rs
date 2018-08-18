@@ -6,41 +6,43 @@ use connect::Connect;
 use std::ffi::CStr;
 use std::{ptr, slice, mem};
 
-#[derive(Copy, Clone)]
-pub enum ListAllDomainsFlags {
-    All = 0,
-    Active = 1,
-    Inactive = 2,
-    Persistent = 4,
-    Transient = 8,
-    Running = 16,
-    Paused = 32,
-    Shutoff = 64,
-    Other = 128,
-    ManagedSave = 256,
-    NoManagedSave = 512,
-    Autostart = 1024,
-    NoAutostart = 2048,
-    HasSnapshot = 4096,
-    NoSnapshot = 8192,
+bitflags! {
+    pub struct ListAllDomainsFlags: u32 {
+        const ACTIVE = 1;
+        const INACTIVE = 2;
+        const PERSISTENT = 4;
+        const TRANSIENT = 8;
+        const RUNNING = 16;
+        const PAUSED = 32;
+        const SHUTOFF = 64;
+        const OTHER = 128;
+        const MANAGED_SAVE = 256;
+        const NO_MANAGED_SAVE = 512;
+        const AUTOSTART = 1024;
+        const NO_AUTOSTART = 2048;
+        const HAS_SNAPSHOT = 4096;
+        const NO_SNAPSHOT = 8192;
+    }
 }
 
-#[derive(Copy, Clone)]
-pub enum DomainCreateFlags {
-    None = 0,
-    StartPaused = 1,
-    StartAutodestroy = 2,
-    StartBypassCache = 4,
-    StartForceBoot = 8,
-    StartValidate = 16,
+bitflags! {
+    pub struct DomainCreateFlags: u32 {
+        const NONE = 0;
+        const START_PAUSED = 1;
+        const START_AUTODESTROY = 2;
+        const START_BYPASS_CACHE = 4;
+        const START_FORCE_BOOT = 8;
+        const START_VALIDATE = 16;
+    }
 }
 
-#[derive(Copy, Clone)]
-pub enum XmlFlags {
-    XmlSecure = 1,
-    XmlInactive = 2,
-    XmlUpdateCpu = 4,
-    XmlMigratable = 8,
+bitflags! {
+    pub struct XmlFlags: u32 {
+        const XML_SECURE = 1;
+        const XML_INACTIVE = 2;
+        const XML_UPDATE_CPU = 4;
+        const XML_MIGRATABLE = 8;
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -291,11 +293,9 @@ impl Domain {
 
     /// Provide an XML description of the domain. The description may
     /// be reused later to relaunch the domain with `create_xml()`.
-    pub fn get_xml_desc(&self, flags: &[XmlFlags]) -> Result<String, Error> {
-        let bitfield: u32 = flags.iter().fold(0, |acc, x| acc | *x as u32);
-
+    pub fn get_xml_desc(&self, flags: XmlFlags) -> Result<String, Error> {
         unsafe {
-            let xml = sys::virDomainGetXMLDesc(self.as_ptr(), bitfield);
+            let xml = sys::virDomainGetXMLDesc(self.as_ptr(), flags.bits());
             if xml.is_null() {
                 return Err(Error::last_error());
             }
@@ -307,13 +307,25 @@ impl Domain {
     /// from the defined to the running domains pools. The domain will
     /// be paused only if restoring from managed state created from a
     /// paused domain.  For more control, see `create_with_flags()`.
-    pub fn create(&self) -> Result<u32, Error> {
+    pub fn create(&self) -> Result<(), Error> {
         unsafe {
             let ret = sys::virDomainCreate(self.as_ptr());
             if ret == -1 {
                 return Err(Error::last_error());
             }
-            return Ok(ret as u32);
+            return Ok(());
+        }
+    }
+
+    /// Launch a defined domain. If the call succeeds the domain moves
+    /// from the defined to the running domains pools.
+    pub fn create_with_flags(&self, flags: DomainCreateFlags) -> Result<(), Error> {
+        unsafe {
+            let res = sys::virDomainCreateWithFlags(self.as_ptr(), flags.bits());
+            if res == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
         }
     }
 
