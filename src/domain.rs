@@ -1,5 +1,5 @@
 extern crate libc;
-extern crate libvirt_sys;
+extern crate libvirt_sys as sys;
 use error::Error;
 
 use connect::Connect;
@@ -38,7 +38,7 @@ pub struct InterfaceStats {
 }
 
 impl InterfaceStats {
-    pub fn from_ptr(ptr: libvirt_sys::virDomainInterfaceStatsPtr) -> InterfaceStats {
+    pub fn from_ptr(ptr: sys::virDomainInterfaceStatsPtr) -> InterfaceStats {
         unsafe {
             InterfaceStats {
                 rx_bytes: (*ptr).rx_bytes as i64,
@@ -83,7 +83,7 @@ pub struct DomainInfo {
 }
 
 impl DomainInfo {
-    pub fn from_ptr(ptr: libvirt_sys::virDomainInfoPtr) -> DomainInfo {
+    pub fn from_ptr(ptr: sys::virDomainInfoPtr) -> DomainInfo {
         unsafe {
             DomainInfo {
                 state: DomainState::new((*ptr).state).unwrap(),
@@ -139,21 +139,21 @@ pub struct DomainInterface {
 }
 
 pub struct Domain {
-    ptr: Option<libvirt_sys::virDomainPtr>,
+    ptr: Option<sys::virDomainPtr>,
 }
 
 impl Domain {
-    pub fn new(ptr: libvirt_sys::virDomainPtr) -> Self {
+    pub fn new(ptr: sys::virDomainPtr) -> Self {
         return Domain { ptr: Some(ptr) };
     }
 
-    pub fn as_ptr(&self) -> libvirt_sys::virDomainPtr {
+    pub fn as_ptr(&self) -> sys::virDomainPtr {
         self.ptr.unwrap()
     }
 
     pub fn lookup_by_id(conn: &Connect, id: u32) -> Result<Domain, Error> {
         unsafe {
-            let ptr = libvirt_sys::virDomainLookupByID(conn.as_ptr(), id as libc::c_int);
+            let ptr = sys::virDomainLookupByID(conn.as_ptr(), id as libc::c_int);
             if ptr.is_null() {
                 return Err(Error::new());
             }
@@ -163,7 +163,7 @@ impl Domain {
 
     pub fn lookup_by_name(conn: &Connect, id: &str) -> Result<Domain, Error> {
         unsafe {
-            let ptr = libvirt_sys::virDomainLookupByName(conn.as_ptr(), string_to_c_chars!(id));
+            let ptr = sys::virDomainLookupByName(conn.as_ptr(), string_to_c_chars!(id));
             if ptr.is_null() {
                 return Err(Error::new());
             }
@@ -173,7 +173,7 @@ impl Domain {
 
     pub fn get_name(&self) -> Result<String, Error> {
         unsafe {
-            let n = libvirt_sys::virDomainGetName(self.as_ptr());
+            let n = sys::virDomainGetName(self.as_ptr());
             if n.is_null() {
                 return Err(Error::new());
             }
@@ -183,8 +183,8 @@ impl Domain {
 
     pub fn get_info(&self) -> Result<DomainInfo, Error> {
         unsafe {
-            let pinfo = &mut libvirt_sys::virDomainInfo::default();
-            let res = libvirt_sys::virDomainGetInfo(self.as_ptr(), pinfo);
+            let pinfo = &mut sys::virDomainInfo::default();
+            let res = sys::virDomainGetInfo(self.as_ptr(), pinfo);
             if res == -1 {
                 return Err(Error::new());
             }
@@ -196,7 +196,7 @@ impl Domain {
         unsafe {
             let mut state: libc::c_int = -1;
             let mut reason: libc::c_int = -1;
-            let ret = libvirt_sys::virDomainGetState(self.as_ptr(), &mut state, &mut reason, 0);
+            let ret = sys::virDomainGetState(self.as_ptr(), &mut state, &mut reason, 0);
             if ret == -1 {
                 return Err(Error::new());
             }
@@ -206,11 +206,11 @@ impl Domain {
 
     pub fn interface_stats(&self, path: &str) -> Result<InterfaceStats, Error> {
         unsafe {
-            let pinfo = &mut libvirt_sys::_virDomainInterfaceStats::default();
-            let ret = libvirt_sys::virDomainInterfaceStats(self.as_ptr(),
+            let pinfo = &mut sys::_virDomainInterfaceStats::default();
+            let ret = sys::virDomainInterfaceStats(self.as_ptr(),
                                               string_to_c_chars!(path),
                                               pinfo,
-                                              mem::size_of::<libvirt_sys::_virDomainInterfaceStats>());
+                                              mem::size_of::<sys::_virDomainInterfaceStats>());
             if ret == -1 {
                 return Err(Error::new());
             }
@@ -220,21 +220,21 @@ impl Domain {
 
     pub fn interface_addresses(&self, source: InterfaceAddressSource) -> Result<Vec<DomainInterface>, Error> {
         let mut interfaces: Vec<DomainInterface> = Vec::new();
-        let mut iface_ptr: *mut libvirt_sys::virDomainInterfacePtr = ptr::null_mut();
+        let mut iface_ptr: *mut sys::virDomainInterfacePtr = ptr::null_mut();
 
         unsafe {
-            let ifaces_count = libvirt_sys::virDomainInterfaceAddresses(self.as_ptr(), &mut iface_ptr, source as u32, 0);
+            let ifaces_count = sys::virDomainInterfaceAddresses(self.as_ptr(), &mut iface_ptr, source as u32, 0);
             if ifaces_count == -1 {
                 return Err(Error::new());
             }
 
-            let ifaces = slice::from_raw_parts::<*mut libvirt_sys::virDomainInterfacePtr>(&mut iface_ptr, ifaces_count as usize);
+            let ifaces = slice::from_raw_parts::<*mut sys::virDomainInterfacePtr>(&mut iface_ptr, ifaces_count as usize);
 
             for iface in ifaces {
                 let name = String::from_utf8_lossy(CStr::from_ptr((***iface).name).to_bytes()).into_owned();
                 let hwaddr = String::from_utf8_lossy(CStr::from_ptr((***iface).hwaddr).to_bytes()).into_owned();
 
-                let raw_addrs = slice::from_raw_parts::<libvirt_sys::virDomainIPAddressPtr>(&mut (***iface).addrs, (***iface).naddrs as usize);
+                let raw_addrs = slice::from_raw_parts::<sys::virDomainIPAddressPtr>(&mut (***iface).addrs, (***iface).naddrs as usize);
                 let addresses = raw_addrs.into_iter()
                     .map(|a| DomainIpAddress {
                         // type_: (**a).type_,

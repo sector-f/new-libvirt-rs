@@ -1,6 +1,5 @@
-
 extern crate libc;
-extern crate libvirt_sys;
+extern crate libvirt_sys as sys;
 
 use std::error::Error as StdError;
 use std::fmt::{Display, Result as FmtResult, Formatter};
@@ -30,7 +29,7 @@ pub struct Error {
 impl Error {
     pub fn new() -> Error {
         unsafe {
-            let ptr: libvirt_sys::virErrorPtr = libvirt_sys::virGetLastError();
+            let ptr: sys::virErrorPtr = sys::virGetLastError();
             Error {
                 code: (*ptr).code,
                 domain: (*ptr).domain,
