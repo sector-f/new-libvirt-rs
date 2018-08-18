@@ -23,7 +23,7 @@ impl Connect {
         unsafe {
             let c = sys::virConnectOpen(string_to_c_chars!(uri));
             if c.is_null() {
-                return Err(Error::new());
+                return Err(Error::last_error());
             }
             return Ok(Connect::new(c));
         }
@@ -33,7 +33,7 @@ impl Connect {
         unsafe {
             let c = sys::virConnectOpenReadOnly(string_to_c_chars!(uri));
             if c.is_null() {
-                return Err(Error::new());
+                return Err(Error::last_error());
             }
             return Ok(Connect::new(c));
         }
@@ -46,7 +46,7 @@ impl Connect {
             let mut domains: *mut sys::virDomainPtr = ptr::null_mut();
             let size = sys::virConnectListAllDomains(self.as_ptr(), &mut domains, flags_value as libc::c_uint);
             if size == -1 {
-                return Err(Error::new());
+                return Err(Error::last_error());
             }
 
             mem::forget(domains);
@@ -66,7 +66,7 @@ impl Connect {
             let mut ids: [libc::c_int; 512] = [0; 512];
             let size = sys::virConnectListDomains(self.as_ptr(), ids.as_mut_ptr(), 512);
             if size == -1 {
-                return Err(Error::new());
+                return Err(Error::last_error());
             }
 
             let mut array: Vec<u32> = Vec::new();
@@ -82,7 +82,7 @@ impl Connect {
             let mut names: [*mut libc::c_char; 1024] = [ptr::null_mut(); 1024];
             let size = sys::virConnectListDefinedDomains(self.as_ptr(), names.as_mut_ptr(), 1024);
             if size == -1 {
-                return Err(Error::new());
+                return Err(Error::last_error());
             }
 
             let mut array: Vec<String> = Vec::new();

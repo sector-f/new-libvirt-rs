@@ -29,7 +29,8 @@ pub struct Error {
 }
 
 impl Error {
-    pub fn new() -> Error {
+    /// Returns the most-recent libvirt error
+    pub fn last_error() -> Error {
         unsafe {
             let ptr: sys::virErrorPtr = sys::virGetLastError();
             Error::from_ptr(ptr)
