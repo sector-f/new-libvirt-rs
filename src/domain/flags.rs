@@ -87,3 +87,42 @@ bitflags! {
         const PARAVIRT = 16;
     }
 }
+
+bitflags! {
+    pub struct DomainMemoryModFlags: u32 {
+        const CURRENT = 0;
+        const LIVE = 1;
+        const CONFIG = 2;
+        const MAXIMUM = 4;
+    }
+}
+
+bitflags! {
+    pub struct DomainModificationImpact: u32 {
+        const CURRENT = 0;
+        const LIVE = 	1;
+        const CONFIG = 2;
+    }
+}
+
+bitflags! {
+    pub struct DomainVcpuFlags: u32 {
+        const CURRENT = 0;
+        const LIVE = 1;
+        const CONFIG = 2;
+        const MAXIMUM = 4;
+        const GUEST = 8;
+        const HOTPLUGGABLE = 16;
+    }
+}
+
+bitflags! {
+    pub struct DomainSaveRestoreFlags: u32 {
+        /// Avoid file system cache pollution
+        const BYPASS_CACHE = 1;
+        /// Favor running over paused
+        const RUNNING = 2;
+        /// Favor paused over running
+        const PAUSED = 4;
+    }
+}

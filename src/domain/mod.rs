@@ -5,6 +5,7 @@ use error::Error;
 use connect::Connect;
 use std::ffi::CStr;
 use std::{ptr, slice, mem};
+use std::os::raw::c_int;
 
 pub mod flags;
 use domain::flags::*;
@@ -439,6 +440,132 @@ impl Domain {
         }
     }
 
+    /// Resume a suspended domain.
+    ///
+    /// the process is restarted from the state where it was frozen by
+    /// calling `suspend()`. This function may require privileged
+    /// access Moreover, resume may not be supported if domain is in
+    /// some special state like VIR_DOMAIN_PMSUSPENDED.
+    pub fn resume(&self) -> Result<u32, Error> {
+        unsafe {
+            let ret = sys::virDomainResume(self.as_ptr());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret as u32);
+        }
+    }
+
+    /// Determine if the domain is currently running.
+    pub fn is_active(&self) -> Result<bool, Error> {
+        unsafe {
+            let ret = sys::virDomainIsActive(self.as_ptr());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret == 1);
+        }
+    }
+
+    /// Undefine a domain.
+    ///
+    /// If the domain is running, it's converted to transient domain,
+    /// without stopping it. If the domain is inactive, the domain
+    /// configuration is removed.
+    pub fn undefine(&self) -> Result<(), Error> {
+        unsafe {
+            if sys::virDomainUndefine(self.as_ptr()) == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    /// Free the domain object.
+    ///
+    /// The running instance is kept alive. The data structure is
+    /// freed and should not be used thereafter.
+    pub fn free(&mut self) -> Result<(), Error> {
+        unsafe {
+            if sys::virDomainFree(self.as_ptr()) == -1 {
+                return Err(Error::last_error());
+            }
+            self.ptr = None;
+            return Ok(());
+        }
+    }
+
+    pub fn is_updated(&self) -> Result<bool, Error> {
+        unsafe {
+            let ret = sys::virDomainIsUpdated(self.as_ptr());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret == 1);
+        }
+    }
+
+    pub fn get_autostart(&self) -> Result<bool, Error> {
+        unsafe {
+            let autostart: *mut c_int = 0 as *mut i32;
+            let ret = sys::virDomainGetAutostart(self.as_ptr(), autostart);
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(true);
+        }
+    }
+
+    pub fn set_autostart(&self, autostart: bool) -> Result<bool, Error> {
+        unsafe {
+            let ret = sys::virDomainSetAutostart(self.as_ptr(), autostart as libc::c_int);
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret == 1);
+        }
+    }
+
+    pub fn set_max_memory(&self, memory: u64) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSetMaxMemory(self.as_ptr(), memory as libc::c_ulong);
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    pub fn get_max_memory(&self) -> Result<u64, Error> {
+        unsafe {
+            let ret = sys::virDomainGetMaxMemory(self.as_ptr());
+            if ret == 0 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret as u64);
+        }
+    }
+
+    pub fn get_max_vcpus(&self) -> Result<u64, Error> {
+        unsafe {
+            let ret = sys::virDomainGetMaxVcpus(self.as_ptr());
+            if ret == 0 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret as u64);
+        }
+    }
+
+    pub fn set_memory(&self, memory: u64) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSetMemory(self.as_ptr(), memory as libc::c_ulong);
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
     pub fn interface_stats(&self, path: &str) -> Result<InterfaceStats, Error> {
         unsafe {
             let pinfo = &mut sys::_virDomainInterfaceStats::default();
@@ -450,6 +577,68 @@ impl Domain {
                 return Err(Error::last_error());
             }
             return Ok(InterfaceStats::from_ptr(pinfo));
+        }
+    }
+
+    pub fn set_memory_flags(&self, memory: u64, flags: DomainMemoryModFlags) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSetMemoryFlags(self.as_ptr(), memory as libc::c_ulong, flags.bits());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+    pub fn set_memory_stats_period(&self, period: i32, flags: DomainMemoryModFlags) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSetMemoryStatsPeriod(self.as_ptr(), period as libc::c_int, flags.bits());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    pub fn set_vcpus(&self, vcpus: u32) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSetVcpus(self.as_ptr(), vcpus as libc::c_uint);
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    pub fn set_vcpus_flags(&self, vcpus: u32, flags: DomainVcpuFlags) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSetVcpusFlags(self.as_ptr(), vcpus as libc::c_uint, flags.bits());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    pub fn domain_restore(conn: &Connect, path: &str) -> Result<(), Error> {
+        unsafe {
+            if sys::virDomainRestore(conn.as_ptr(), string_to_c_chars!(path)) == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    pub fn domain_restore_flags(conn: &Connect, path: &str, dxml: Option<&str>, flags: DomainSaveRestoreFlags) -> Result<(), Error> {
+        unsafe {
+            let xml = match dxml {
+                Some(c) => string_to_c_chars!(c),
+                None => ptr::null(),
+            };
+
+            if sys::virDomainRestoreFlags(conn.as_ptr(), string_to_c_chars!(path), xml, flags.bits()) == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
         }
     }
 
