@@ -1,7 +1,7 @@
 extern crate libc;
 extern crate libvirt_sys as sys;
 
-use domain::{Domain, ListAllDomainsFlags};
+use domain::{Domain, flags::ListAllDomainsFlags};
 use error::Error;
 use std::{ptr, mem};
 

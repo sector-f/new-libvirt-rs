@@ -6,59 +6,8 @@ use connect::Connect;
 use std::ffi::CStr;
 use std::{ptr, slice, mem};
 
-bitflags! {
-    pub struct ListAllDomainsFlags: u32 {
-        const ACTIVE = 1;
-        const INACTIVE = 2;
-        const PERSISTENT = 4;
-        const TRANSIENT = 8;
-        const RUNNING = 16;
-        const PAUSED = 32;
-        const SHUTOFF = 64;
-        const OTHER = 128;
-        const MANAGED_SAVE = 256;
-        const NO_MANAGED_SAVE = 512;
-        const AUTOSTART = 1024;
-        const NO_AUTOSTART = 2048;
-        const HAS_SNAPSHOT = 4096;
-        const NO_SNAPSHOT = 8192;
-    }
-}
-
-bitflags! {
-    pub struct DomainCreateFlags: u32 {
-        const NONE = 0;
-        const START_PAUSED = 1;
-        const START_AUTODESTROY = 2;
-        const START_BYPASS_CACHE = 4;
-        const START_FORCE_BOOT = 8;
-        const START_VALIDATE = 16;
-    }
-}
-
-bitflags! {
-    pub struct XmlFlags: u32 {
-        const XML_SECURE = 1;
-        const XML_INACTIVE = 2;
-        const XML_UPDATE_CPU = 4;
-        const XML_MIGRATABLE = 8;
-    }
-}
-
-bitflags! {
-    pub struct DomainDefineFlags: u32 {
-        const DEFINE_VALIDATE = 1;
-    }
-}
-
-bitflags! {
-    pub struct DomainDestroyFlags: u32 {
-        /// Default behavior - could lead to data loss!!
-        const DESTROY_DEFAULT = 0;
-        /// only SIGTERM, no SIGKILL
-        const DESTROY_GRACEFUL = 1;
-    }
-}
+pub mod flags;
+use domain::flags::*;
 
 #[derive(Clone, Debug)]
 pub struct InterfaceStats {
@@ -431,6 +380,62 @@ impl Domain {
                 return Err(Error::last_error());
             }
             return Ok(ret as u32);
+        }
+    }
+
+    /// Shutdown a domain
+    ///
+    /// The domain object is still usable thereafter, but the domain
+    /// OS is being stopped. Note that the guest OS may ignore the
+    /// request. Additionally, the hypervisor may check and support
+    /// the domain 'on_poweroff' XML setting resulting in a domain
+    /// that reboots instead of shutting down. For guests that react
+    /// to a shutdown request, the differences from `destroy()` are
+    /// that the guests disk storage will be in a stable state rather
+    /// than having the (virtual) power cord pulled, and this command
+    /// returns as soon as the shutdown request is issued rather than
+    /// blocking until the guest is no longer running.
+    pub fn shutdown(&self) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainShutdown(self.as_ptr());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+
+    /// Reboot a domain. Passing `None` will have the same effect as
+    /// passing `Some(RebootFlags::DEFAULT)`
+    ///
+    /// The domain object is still usable thereafter.
+    pub fn reboot(&self, flags: Option<RebootFlags>) -> Result<(), Error> {
+        let flags = flags.and_then(|f| Some(f.bits())).unwrap_or(0);
+        unsafe {
+            if sys::virDomainReboot(self.as_ptr(), flags) == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    /// Suspend a domain.
+    ///
+    /// Suspends an active domain, the process is frozen without
+    /// further access to CPU resources and I/O but the memory used by
+    /// the domain at the hypervisor level will stay allocated. Use
+    /// `resume` to reactivate the domain.  This function may
+    /// require privileged access.  Moreover, suspend may not be
+    /// supported if domain is in some special state like
+    /// VIR_DOMAIN_PMSUSPENDED.
+    pub fn suspend(&self) -> Result<(), Error> {
+        unsafe {
+            let ret = sys::virDomainSuspend(self.as_ptr());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
         }
     }
 
