@@ -45,6 +45,21 @@ bitflags! {
     }
 }
 
+bitflags! {
+    pub struct DomainDefineFlags: u32 {
+        const DEFINE_VALIDATE = 1;
+    }
+}
+
+bitflags! {
+    pub struct DomainDestroyFlags: u32 {
+        /// Default behavior - could lead to data loss!!
+        const DESTROY_DEFAULT = 0;
+        /// only SIGTERM, no SIGKILL
+        const DESTROY_GRACEFUL = 1;
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct InterfaceStats {
     pub rx_bytes: i64,
@@ -326,6 +341,96 @@ impl Domain {
                 return Err(Error::last_error());
             }
             return Ok(());
+        }
+    }
+
+    /// Launch a new guest domain, based on an XML description similar
+    /// to the one returned by `get_xml_desc()`.
+    ///
+    /// This function may require privileged access to the hypervisor.
+    ///
+    /// The domain is not persistent, so its definition will disappear
+    /// when it is destroyed, or if the host is restarted (see
+    /// `define_xml()` to define persistent domains).
+    pub fn create_xml(conn: &Connect, xml: &str, flags: DomainCreateFlags) -> Result<Domain, Error> {
+        unsafe {
+            let ptr = sys::virDomainCreateXML(conn.as_ptr(), string_to_c_chars!(xml), flags.bits());
+            if ptr.is_null() {
+                return Err(Error::last_error());
+            }
+            return Ok(Domain::new(ptr));
+        }
+    }
+
+    /// Define a domain, but does not start it.
+    ///
+    /// This definition is persistent, until explicitly undefined with
+    /// `undefine()`. A previous definition for this domain would be
+    /// overridden if it already exists.
+    ///
+    /// # Note:
+    ///
+    /// Some hypervisors may prevent this operation if there is a
+    /// current block copy operation on a transient domain with the
+    /// same id as the domain being defined.
+    pub fn define_xml(conn: &Connect, xml: &str) -> Result<Domain, Error> {
+        unsafe {
+            let ptr = sys::virDomainDefineXML(conn.as_ptr(), string_to_c_chars!(xml));
+            if ptr.is_null() {
+                return Err(Error::last_error());
+            }
+            return Ok(Domain::new(ptr));
+        }
+    }
+
+    /// Define a domain, but does not start it.
+    ///
+    /// This definition is persistent, until explicitly undefined with
+    /// `undefine()`. A previous definition for this domain would be
+    /// overridden if it already exists.
+    ///
+    /// # Note:
+    ///
+    /// Some hypervisors may prevent this operation if there is a
+    /// current block copy operation on a transient domain with the
+    /// same id as the domain being defined.
+    pub fn define_xml_flags(conn: &Connect,
+                            xml: &str,
+                            flags: DomainDefineFlags)
+                            -> Result<Domain, Error> {
+        unsafe {
+            let ptr = sys::virDomainDefineXMLFlags(conn.as_ptr(), string_to_c_chars!(xml), flags.bits());
+            if ptr.is_null() {
+                return Err(Error::last_error());
+            }
+            return Ok(Domain::new(ptr));
+        }
+    }
+
+    /// Destroy the domain. The running instance is shutdown if not
+    /// down already and all resources used by it are given back to
+    /// the hypervisor. This does not free the associated virDomainPtr
+    /// object. This function may require privileged access.
+    pub fn destroy(&self) -> Result<(), Error> {
+        unsafe {
+            if sys::virDomainDestroy(self.as_ptr()) == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(());
+        }
+    }
+
+    /// Destroy the domain. The running instance is shutdown if not
+    /// down already and all resources used by it are given back to
+    /// the hypervisor. This does not free the associated virDomainPtr
+    /// object. This function may require privileged access.
+    pub fn destroy_flags(&self, flags: DomainDestroyFlags) -> Result<u32, Error> {
+        unsafe {
+            let ret = sys::virDomainDestroyFlags(self.as_ptr(), flags.bits());
+            if ret == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(ret as u32);
         }
     }
 
