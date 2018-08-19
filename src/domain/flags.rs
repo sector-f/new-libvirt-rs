@@ -39,35 +39,35 @@ bitflags! {
 bitflags! {
     pub struct DomainCreateFlags: u32 {
         const NONE = 0;
-        const START_PAUSED = 1;
-        const START_AUTODESTROY = 2;
-        const START_BYPASS_CACHE = 4;
-        const START_FORCE_BOOT = 8;
-        const START_VALIDATE = 16;
+        const PAUSED = 1;
+        const AUTODESTROY = 2;
+        const BYPASS_CACHE = 4;
+        const FORCE_BOOT = 8;
+        const VALIDATE = 16;
     }
 }
 
 bitflags! {
     pub struct XmlFlags: u32 {
-        const XML_SECURE = 1;
-        const XML_INACTIVE = 2;
-        const XML_UPDATE_CPU = 4;
-        const XML_MIGRATABLE = 8;
+        const SECURE = 1;
+        const INACTIVE = 2;
+        const UPDATE_CPU = 4;
+        const MIGRATABLE = 8;
     }
 }
 
 bitflags! {
     pub struct DomainDefineFlags: u32 {
-        const DEFINE_VALIDATE = 1;
+        const VALIDATE = 1;
     }
 }
 
 bitflags! {
     pub struct DomainDestroyFlags: u32 {
         /// Default behavior - could lead to data loss!!
-        const DESTROY_DEFAULT = 0;
+        const DEFAULT = 0;
         /// only SIGTERM, no SIGKILL
-        const DESTROY_GRACEFUL = 1;
+        const GRACEFUL = 1;
     }
 }
 
