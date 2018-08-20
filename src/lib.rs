@@ -46,4 +46,5 @@ macro_rules! impl_from {
 pub mod connect;
 pub mod domain;
 pub mod error;
+pub mod secret;
 pub mod stream;
