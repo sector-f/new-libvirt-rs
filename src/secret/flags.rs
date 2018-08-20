@@ -5,7 +5,7 @@ bitflags! {
 }
 
 bitflags! {
-    pub struct SecretUsageType: u32 {
+    pub struct SecretUsageType: i32 {
         const VIR_SECRET_USAGE_TYPE_NONE = 0;
         const VIR_SECRET_USAGE_TYPE_VOLUME = 1;
         const VIR_SECRET_USAGE_TYPE_CEPH = 2;

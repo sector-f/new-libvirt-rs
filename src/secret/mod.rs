@@ -59,7 +59,7 @@ impl Secret {
     pub fn lookup_by_usage(conn: &Connect, usagetype: SecretUsageType, usageid: &str) -> Result<Secret, Error> {
         unsafe {
             let ptr = sys::virSecretLookupByUsage(conn.as_ptr(),
-                                             usagetype.bits() as i32,
+                                             usagetype.bits(),
                                              string_to_c_chars!(usageid));
             if ptr.is_null() {
                 return Err(Error::last_error());
@@ -84,7 +84,7 @@ impl Secret {
             if t == -1 {
                 return Err(Error::last_error());
             }
-            return Ok(SecretUsageType::from_bits_truncate(t as u32));
+            return Ok(SecretUsageType::from_bits_truncate(t));
         }
     }
 
