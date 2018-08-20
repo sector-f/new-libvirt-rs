@@ -15,11 +15,6 @@ pub struct Secret {
     ptr: Option<sys::virSecretPtr>,
 }
 
-#[link(name = "virt")]
-extern "C" {
-    fn virSecretGetName(ptr: sys::virSecretPtr) -> *const libc::c_char;
-}
-
 impl Secret {
     pub fn new(ptr: sys::virSecretPtr) -> Secret {
         return Secret { ptr: Some(ptr) };
@@ -39,11 +34,11 @@ impl Secret {
         }
     }
 
-    pub fn define_xml(conn: &Connect, xml: &str, flags: u32) -> Result<Secret, Error> {
+    pub fn define_xml(conn: &Connect, xml: &str) -> Result<Secret, Error> {
         unsafe {
             let ptr = sys::virSecretDefineXML(conn.as_ptr(),
                                          string_to_c_chars!(xml),
-                                         flags as libc::c_uint);
+                                         0);
             if ptr.is_null() {
                 return Err(Error::last_error());
             }
@@ -61,25 +56,15 @@ impl Secret {
         }
     }
 
-    pub fn lookup_by_usage(conn: &Connect, usagetype: i32, usageid: &str) -> Result<Secret, Error> {
+    pub fn lookup_by_usage(conn: &Connect, usagetype: SecretUsageType, usageid: &str) -> Result<Secret, Error> {
         unsafe {
             let ptr = sys::virSecretLookupByUsage(conn.as_ptr(),
-                                             usagetype as libc::c_int,
+                                             usagetype.bits() as i32,
                                              string_to_c_chars!(usageid));
             if ptr.is_null() {
                 return Err(Error::last_error());
             }
             return Ok(Secret::new(ptr));
-        }
-    }
-
-    pub fn get_name(&self) -> Result<String, Error> {
-        unsafe {
-            let n = virSecretGetName(self.as_ptr());
-            if n.is_null() {
-                return Err(Error::last_error());
-            }
-            return Ok(c_chars_to_string!(n));
         }
     }
 
@@ -93,13 +78,13 @@ impl Secret {
         }
     }
 
-    pub fn get_usage_type(&self) -> Result<u32, Error> {
+    pub fn get_usage_type(&self) -> Result<SecretUsageType, Error> {
         unsafe {
             let t = sys::virSecretGetUsageType(self.as_ptr());
             if t == -1 {
                 return Err(Error::last_error());
             }
-            return Ok(t as u32);
+            return Ok(SecretUsageType::from_bits_truncate(t as u32));
         }
     }
 
@@ -123,22 +108,22 @@ impl Secret {
         }
     }
 
-    pub fn set_value(&self, value: &[u8], flags: u32) -> Result<(), Error> {
+    pub fn set_value(&self, value: &[u8]) -> Result<(), Error> {
         unsafe {
             if sys::virSecretSetValue(self.as_ptr(),
                                  value.as_ptr(),
                                  value.len(),
-                                 flags) == -1 {
+                                 0) == -1 {
                 return Err(Error::last_error());
             }
             return Ok(());
         }
     }
 
-    pub fn get_value(&self, size: isize, flags: u32) -> Result<Vec<u8>, Error> {
+    pub fn get_value(&self, size: isize) -> Result<Vec<u8>, Error> {
         unsafe {
             let size_ptr: *mut usize = &mut (size as usize);
-            let n = sys::virSecretGetValue(self.as_ptr(), size_ptr, flags as libc::c_uint);
+            let n = sys::virSecretGetValue(self.as_ptr(), size_ptr, 0);
             if n.is_null() {
                 return Err(Error::last_error());
             }
