@@ -48,3 +48,4 @@ pub mod domain;
 pub mod error;
 pub mod secret;
 pub mod stream;
+pub mod interface;
