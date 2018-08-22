@@ -34,6 +34,7 @@ bitflags! {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum StorageVolType {
     File = 0,
     Block = 1,
@@ -42,6 +43,21 @@ pub enum StorageVolType {
     NetDir = 4,
     Ploop = 5,
     Last = 6,
+}
+
+impl StorageVolType {
+    pub fn from_int(n: i32) -> Option<Self> {
+        match n {
+            0 => Some(StorageVolType::File),
+            1 => Some(StorageVolType::Block),
+            2 => Some(StorageVolType::Dir),
+            3 => Some(StorageVolType::Network),
+            4 => Some(StorageVolType::NetDir),
+            5 => Some(StorageVolType::Ploop),
+            6 => Some(StorageVolType::Last),
+            _ => None,
+        }
+    }
 }
 
 bitflags! {

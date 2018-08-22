@@ -4,13 +4,41 @@ use error::Error;
 
 use connect::Connect;
 use stream::Stream;
-use std::ffi::CStr;
-use std::{ptr, slice, mem};
-use std::os::raw::c_int;
-use std::path::Path;
 
 pub mod flags;
 use storage_vol::flags::*;
+
+#[derive(Clone, Debug)]
+pub struct StorageVolInfo {
+    /// See: `virStorageVolType` flags
+    pub type_: StorageVolType,
+    /// Logical size bytes.
+    pub capacity: u64,
+    /// Current allocation bytes
+    pub allocation: u64,
+}
+
+impl Default for StorageVolInfo {
+    fn default() -> Self {
+        StorageVolInfo {
+            type_: StorageVolType::File,
+            capacity: 0,
+            allocation: 0,
+        }
+    }
+}
+
+impl StorageVolInfo {
+    pub fn from_ptr(ptr: sys::virStorageVolInfoPtr) -> StorageVolInfo {
+        unsafe {
+            StorageVolInfo {
+                type_: StorageVolType::from_int((*ptr).type_).unwrap(),
+                capacity: (*ptr).capacity as u64,
+                allocation: (*ptr).allocation as u64,
+            }
+        }
+    }
+}
 
 /// Provides APIs for the management of storage volumes.
 ///
@@ -190,29 +218,27 @@ impl StorageVol {
         }
     }
 
-    // TODO: uncomment when StorageVolInfo is implemented
+    pub fn get_info(&self) -> Result<StorageVolInfo, Error> {
+        unsafe {
+            let pinfo = &mut sys::virStorageVolInfo::default();
+            let res = sys::virStorageVolGetInfo(self.as_ptr(), pinfo);
+            if res == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(StorageVolInfo::from_ptr(pinfo));
+        }
+    }
 
-    // pub fn get_info(&self) -> Result<StorageVolInfo, Error> {
-    //     unsafe {
-    //         let pinfo = &mut sys::virStorageVolInfo::default();
-    //         let res = sys::virStorageVolGetInfo(self.as_ptr(), pinfo);
-    //         if res == -1 {
-    //             return Err(Error::last_error());
-    //         }
-    //         return Ok(StorageVolInfo::from_ptr(pinfo));
-    //     }
-    // }
-
-    // pub fn get_info_flags(&self, flags: StorageVolInfoFlags) -> Result<StorageVolInfo, Error> {
-    //     unsafe {
-    //         let pinfo = &mut sys::virStorageVolInfo::default();
-    //         let res = sys::virStorageVolGetInfoFlags(self.as_ptr(), pinfo, flags.bits());
-    //         if res == -1 {
-    //             return Err(Error::last_error());
-    //         }
-    //         return Ok(StorageVolInfo::from_ptr(pinfo));
-    //     }
-    // }
+    pub fn get_info_flags(&self, flags: StorageVolInfoFlags) -> Result<StorageVolInfo, Error> {
+        unsafe {
+            let pinfo = &mut sys::virStorageVolInfo::default();
+            let res = sys::virStorageVolGetInfoFlags(self.as_ptr(), pinfo, flags.bits());
+            if res == -1 {
+                return Err(Error::last_error());
+            }
+            return Ok(StorageVolInfo::from_ptr(pinfo));
+        }
+    }
 
     pub fn download(&self, stream: &Stream, offset: u64, length: u64, flags: StorageVolDownloadFlags) -> Result<(), Error> {
         unsafe {
