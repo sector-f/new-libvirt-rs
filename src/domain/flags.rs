@@ -18,25 +18,6 @@ bitflags! {
 }
 
 bitflags! {
-    pub struct ListAllDomainsFlags: u32 {
-        const ACTIVE = 1;
-        const INACTIVE = 2;
-        const PERSISTENT = 4;
-        const TRANSIENT = 8;
-        const RUNNING = 16;
-        const PAUSED = 32;
-        const SHUTOFF = 64;
-        const OTHER = 128;
-        const MANAGED_SAVE = 256;
-        const NO_MANAGED_SAVE = 512;
-        const AUTOSTART = 1024;
-        const NO_AUTOSTART = 2048;
-        const HAS_SNAPSHOT = 4096;
-        const NO_SNAPSHOT = 8192;
-    }
-}
-
-bitflags! {
     pub struct DomainCreateFlags: u32 {
         const NONE = 0;
         const PAUSED = 1;

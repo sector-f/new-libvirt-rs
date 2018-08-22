@@ -1,9 +1,12 @@
 extern crate libc;
 extern crate libvirt_sys as sys;
 
-use domain::{Domain, flags::ListAllDomainsFlags};
+use domain::Domain;
 use error::Error;
 use std::{ptr, mem};
+
+pub mod flags;
+use connect::flags::*;
 
 #[derive(Debug)]
 pub struct Connect {
