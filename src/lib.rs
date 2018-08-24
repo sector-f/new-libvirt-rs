@@ -50,3 +50,4 @@ pub mod secret;
 pub mod stream;
 pub mod interface;
 pub mod storage_vol;
+pub mod storage_pool;
